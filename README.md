@@ -58,11 +58,6 @@ danmuku.cache().then(danmus => {
   console.log(danmus);
 });
 
-// Cache the danmu
-danmuku.cache().then(danmus => {
-  console.log(danmus);
-});
-
 // Get the DB
 this.db;
 ```
