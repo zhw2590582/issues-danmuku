@@ -1,6 +1,6 @@
 {
   "name": "issues-danmuku",
-  "version": "1.0.2",
+  "version": "1.0.0",
   "description": "Detect connection speed with mini chart",
   "main": "dist/IssuesDanmuku.js",
   "scripts": {

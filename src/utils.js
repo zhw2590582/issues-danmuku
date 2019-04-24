@@ -15,14 +15,6 @@ export function getURLParameters() {
 export function throwError(condition, msg, callback) {
   if (!condition) {
     callback && callback();
-    tip(msg);
-    throw new Error(`Gitting Error: ${msg}`);
+    throw new Error(`Danmuku Error: ${msg}`);
   }
-}
-
-export function danmuFormat(danmu) {
-  if (Array.isArray(danmu)) {
-    return danmu.map(danmuFormat);
-  }
-  return danmu;
 }

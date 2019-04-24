@@ -1,23 +1,18 @@
-import localStorage from 'localforage';
-import { queryStringify, getURLParameters, throwError, danmuFormat } from './utils';
-
-localStorage.config({
-  driver: [
-    localStorage.WEBSQL,
-    localStorage.INDEXEDDB,
-    localStorage.LOCALSTORAGE
-  ],
-  name: 'issues-danmuku'
-});
+import localforage from 'localforage';
+import { queryStringify, getURLParameters, throwError } from './utils';
 
 export default class IssuesDanmuku {
   constructor(options) {
     this.options = Object.assign({}, IssuesDanmuku.DEFAULT, options);
+    this.db = localforage.createInstance({
+      driver: [
+        localforage.WEBSQL,
+        localforage.INDEXEDDB,
+        localforage.LOCALSTORAGE
+      ],
+      name: 'danmuku-db'
+    });
     this.init();
-  }
-
-  static get localStorage() {
-    return localStorage;
   }
 
   static get DEFAULT() {
@@ -32,25 +27,35 @@ export default class IssuesDanmuku {
   }
 
   async init() {
-    this.userInfo = await localStorage.getItem('userInfo');
-    this.token = await localStorage.getItem('token');
-    this.isLogin = !!this.userInfo && !!this.token;
     const { code } = getURLParameters();
     if (code) {
       const data = await this.getToken(code);
       throwError(data.access_token, 'Can not get token, Please login again!');
-      await localStorage.setItem('token', data.access_token);
+      await this.db.setItem('token', data.access_token);
       const userInfo = await this.getUserInfo(data.access_token);
       throwError(userInfo.id, 'Can not get user info, Please login again!');
-      await localStorage.setItem('userInfo', userInfo);
-      const redirect_uri = await localStorage.getItem('redirect_uri');
+      await this.db.setItem('userInfo', userInfo);
+      const redirect_uri = await this.db.getItem('redirect_uri');
       throwError(redirect_uri, 'Can not get redirect url, Please login again!');
       window.history.replaceState(null, '', redirect_uri);
     }
+
+    this.userInfo = await this.db.getItem('userInfo');
+    this.token = await this.db.getItem('token');
+    this.isLogin = !!this.userInfo && !!this.token;
+    if (this.isLogin) {
+      await this.db.getItem('danmus').then(async danmus => {
+        if (!danmus) {
+          await this.cache();
+        }
+      });
+    }
   }
 
-  async oauth() {
-    await localStorage.setItem('redirect_uri', window.location.href);
+  async login() {
+    await this.db.clear();
+    await this.db.setItem('redirect_uri', window.location.href);
+    await this.db.setItem('login_time', Date.now());
     window.location.href = `http://github.com/login/oauth/authorize?${queryStringify(
       {
         state: 'issues-danmuku',
@@ -61,11 +66,12 @@ export default class IssuesDanmuku {
     )}`;
   }
 
+  async logout() {
+    await this.db.clear();
+    window.location.reload();
+  }
+
   async request(method, url, body) {
-    if (!this.isLogin) {
-      this.oauth();
-      return;
-    }
     method = method.toUpperCase();
     body = body && JSON.stringify(body);
     let headers = {
@@ -86,7 +92,8 @@ export default class IssuesDanmuku {
       if (res.status === 404) {
         return Promise.reject('Unauthorized.');
       } else if (res.status === 401) {
-        return localforage.clear().then(window.location.reload);
+        await this.db.clear();
+        return window.location.reload();
       } else {
         return res.json();
       }
@@ -122,27 +129,10 @@ export default class IssuesDanmuku {
     );
   }
 
-  async send(msg, videoTime = 0) {
-    const query = this.urlQuery({
-      body: JSON.stringify({
-        sendTime: Date.now(),
-        user: this.userInfo.login,
-        videoTime,
-        msg
-      })
-    });
-    let data = await this.request(
-      'post',
-      `https://api.github.com/repos/${this.options.api}/comments`,
-      query
-    );
-    throwError(data.id, 'Can not send the danmu, Please try again!');
-    return danmuFormat(data);
-  }
-
-  async get() {
+  async cache() {
     let result = [];
     let page = 1;
+    await this.db.setItem('cache_time', Date.now());
     while (true) {
       const list = await this.request(
         'get',
@@ -161,8 +151,36 @@ export default class IssuesDanmuku {
       );
       result = [...result, ...list];
       if (list.length < this.options.perPage) {
-        return danmuFormat(result);
+        const danmus = result.map(item => {
+          const body = JSON.parse(item.body);
+          return {
+            id: item.id,
+            ...body
+          };
+        });
+        return this.db.setItem('danmus', danmus);
       }
     }
+  }
+
+  async send(danmu = {}) {
+    throwError(
+      danmu.time,
+      "The 'time' to send the danmu cannot be empty, Please try again!"
+    );
+    throwError(
+      danmu.msg,
+      "The 'msg' to send the danmu cannot be empty, Please try again!"
+    );
+    const query = this.urlQuery({
+      body: JSON.stringify(danmu)
+    });
+    let data = await this.request(
+      'post',
+      `https://api.github.com/repos/${this.options.api}/comments`,
+      query
+    );
+    throwError(data.id, 'Can not send the danmu, Please try again!');
+    return JSON.parse(data.body);
   }
 }
