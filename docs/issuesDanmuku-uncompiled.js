@@ -3718,6 +3718,8 @@
         driver: [localforage.WEBSQL, localforage.INDEXEDDB, localforage.LOCALSTORAGE],
         name: 'danmuku-db'
       });
+      this.limit = 0;
+      this.remaining = 0;
       this.init();
     }
 
@@ -3726,106 +3728,80 @@
       value: function () {
         var _init = asyncToGenerator(
         /*#__PURE__*/
-        regenerator.mark(function _callee2() {
-          var _this = this;
+        regenerator.mark(function _callee() {
+          var _getURLParameters, code, data, userInfo, redirect_uri, danmus;
 
-          var _getURLParameters, code, data, userInfo, redirect_uri;
-
-          return regenerator.wrap(function _callee2$(_context2) {
+          return regenerator.wrap(function _callee$(_context) {
             while (1) {
-              switch (_context2.prev = _context2.next) {
+              switch (_context.prev = _context.next) {
                 case 0:
                   _getURLParameters = getURLParameters(), code = _getURLParameters.code;
 
                   if (!code) {
-                    _context2.next = 19;
+                    _context.next = 19;
                     break;
                   }
 
-                  _context2.next = 4;
+                  _context.next = 4;
                   return this.getToken(code);
 
                 case 4:
-                  data = _context2.sent;
+                  data = _context.sent;
                   throwError(data.access_token, 'Can not get token, Please login again!');
-                  _context2.next = 8;
+                  _context.next = 8;
                   return this.db.setItem('token', data.access_token);
 
                 case 8:
-                  _context2.next = 10;
+                  _context.next = 10;
                   return this.getUserInfo(data.access_token);
 
                 case 10:
-                  userInfo = _context2.sent;
+                  userInfo = _context.sent;
                   throwError(userInfo.id, 'Can not get user info, Please login again!');
-                  _context2.next = 14;
+                  _context.next = 14;
                   return this.db.setItem('userInfo', userInfo);
 
                 case 14:
-                  _context2.next = 16;
+                  _context.next = 16;
                   return this.db.getItem('redirect_uri');
 
                 case 16:
-                  redirect_uri = _context2.sent;
+                  redirect_uri = _context.sent;
                   throwError(redirect_uri, 'Can not get redirect url, Please login again!');
                   window.history.replaceState(null, '', redirect_uri);
 
                 case 19:
-                  _context2.next = 21;
+                  _context.next = 21;
                   return this.db.getItem('userInfo');
 
                 case 21:
-                  this.userInfo = _context2.sent;
-                  _context2.next = 24;
+                  this.userInfo = _context.sent;
+                  _context.next = 24;
                   return this.db.getItem('token');
 
                 case 24:
-                  this.token = _context2.sent;
+                  this.token = _context.sent;
+                  _context.next = 27;
+                  return this.db.getItem('danmus');
+
+                case 27:
+                  danmus = _context.sent;
                   this.isLogin = !!this.userInfo && !!this.token;
 
-                  if (!this.isLogin) {
-                    _context2.next = 29;
+                  if (!(this.isLogin && !danmus)) {
+                    _context.next = 32;
                     break;
                   }
 
-                  _context2.next = 29;
-                  return this.db.getItem('danmus').then(
-                  /*#__PURE__*/
-                  function () {
-                    var _ref = asyncToGenerator(
-                    /*#__PURE__*/
-                    regenerator.mark(function _callee(danmus) {
-                      return regenerator.wrap(function _callee$(_context) {
-                        while (1) {
-                          switch (_context.prev = _context.next) {
-                            case 0:
-                              if (danmus) {
-                                _context.next = 3;
-                                break;
-                              }
+                  _context.next = 32;
+                  return this.cache();
 
-                              _context.next = 3;
-                              return _this.cache();
-
-                            case 3:
-                            case "end":
-                              return _context.stop();
-                          }
-                        }
-                      }, _callee);
-                    }));
-
-                    return function (_x) {
-                      return _ref.apply(this, arguments);
-                    };
-                  }());
-
-                case 29:
+                case 32:
                 case "end":
-                  return _context2.stop();
+                  return _context.stop();
               }
             }
-          }, _callee2, this);
+          }, _callee, this);
         }));
 
         function init() {
@@ -3839,20 +3815,20 @@
       value: function () {
         var _login = asyncToGenerator(
         /*#__PURE__*/
-        regenerator.mark(function _callee3() {
-          return regenerator.wrap(function _callee3$(_context3) {
+        regenerator.mark(function _callee2() {
+          return regenerator.wrap(function _callee2$(_context2) {
             while (1) {
-              switch (_context3.prev = _context3.next) {
+              switch (_context2.prev = _context2.next) {
                 case 0:
-                  _context3.next = 2;
+                  _context2.next = 2;
                   return this.db.clear();
 
                 case 2:
-                  _context3.next = 4;
+                  _context2.next = 4;
                   return this.db.setItem('redirect_uri', window.location.href);
 
                 case 4:
-                  _context3.next = 6;
+                  _context2.next = 6;
                   return this.db.setItem('login_time', Date.now());
 
                 case 6:
@@ -3865,10 +3841,10 @@
 
                 case 7:
                 case "end":
-                  return _context3.stop();
+                  return _context2.stop();
               }
             }
-          }, _callee3, this);
+          }, _callee2, this);
         }));
 
         function login() {
@@ -3882,12 +3858,12 @@
       value: function () {
         var _logout = asyncToGenerator(
         /*#__PURE__*/
-        regenerator.mark(function _callee4() {
-          return regenerator.wrap(function _callee4$(_context4) {
+        regenerator.mark(function _callee3() {
+          return regenerator.wrap(function _callee3$(_context3) {
             while (1) {
-              switch (_context4.prev = _context4.next) {
+              switch (_context3.prev = _context3.next) {
                 case 0:
-                  _context4.next = 2;
+                  _context3.next = 2;
                   return this.db.clear();
 
                 case 2:
@@ -3895,10 +3871,10 @@
 
                 case 3:
                 case "end":
-                  return _context4.stop();
+                  return _context3.stop();
               }
             }
-          }, _callee4, this);
+          }, _callee3, this);
         }));
 
         function logout() {
@@ -3912,11 +3888,11 @@
       value: function () {
         var _request = asyncToGenerator(
         /*#__PURE__*/
-        regenerator.mark(function _callee5(method, url, body) {
+        regenerator.mark(function _callee4(method, url, body) {
           var headers, res;
-          return regenerator.wrap(function _callee5$(_context5) {
+          return regenerator.wrap(function _callee4$(_context4) {
             while (1) {
-              switch (_context5.prev = _context5.next) {
+              switch (_context4.prev = _context4.next) {
                 case 0:
                   method = method.toUpperCase();
                   body = body && JSON.stringify(body);
@@ -3929,8 +3905,8 @@
                     headers.Authorization = "token ".concat(this.token);
                   }
 
-                  _context5.prev = 4;
-                  _context5.next = 7;
+                  _context4.prev = 4;
+                  _context4.next = 7;
                   return fetch(url, {
                     method: method,
                     headers: headers,
@@ -3938,48 +3914,50 @@
                   });
 
                 case 7:
-                  res = _context5.sent;
+                  res = _context4.sent;
 
                   if (!(res.status === 404)) {
-                    _context5.next = 12;
+                    _context4.next = 12;
                     break;
                   }
 
-                  return _context5.abrupt("return", Promise.reject('Unauthorized.'));
+                  return _context4.abrupt("return", Promise.reject('Unauthorized.'));
 
                 case 12:
                   if (!(res.status === 401)) {
-                    _context5.next = 18;
+                    _context4.next = 18;
                     break;
                   }
 
-                  _context5.next = 15;
+                  _context4.next = 15;
                   return this.db.clear();
 
                 case 15:
-                  return _context5.abrupt("return", window.location.reload());
+                  return _context4.abrupt("return", window.location.reload());
 
                 case 18:
-                  return _context5.abrupt("return", res.json());
-
-                case 19:
-                  _context5.next = 24;
-                  break;
+                  this.limit = Number(res.headers.get('X-RateLimit-Limit'));
+                  this.remaining = Number(res.headers.get('X-RateLimit-Remaining'));
+                  return _context4.abrupt("return", res.json());
 
                 case 21:
-                  _context5.prev = 21;
-                  _context5.t0 = _context5["catch"](4);
-                  console.warn(_context5.t0, url);
+                  _context4.next = 26;
+                  break;
 
-                case 24:
+                case 23:
+                  _context4.prev = 23;
+                  _context4.t0 = _context4["catch"](4);
+                  console.warn(_context4.t0, url);
+
+                case 26:
                 case "end":
-                  return _context5.stop();
+                  return _context4.stop();
               }
             }
-          }, _callee5, this, [[4, 21]]);
+          }, _callee4, this, [[4, 23]]);
         }));
 
-        function request(_x2, _x3, _x4) {
+        function request(_x, _x2, _x3) {
           return _request.apply(this, arguments);
         }
 
@@ -4013,32 +3991,32 @@
       value: function () {
         var _cache = asyncToGenerator(
         /*#__PURE__*/
-        regenerator.mark(function _callee6() {
+        regenerator.mark(function _callee5() {
           var result, page, list, danmus;
-          return regenerator.wrap(function _callee6$(_context6) {
+          return regenerator.wrap(function _callee5$(_context5) {
             while (1) {
-              switch (_context6.prev = _context6.next) {
+              switch (_context5.prev = _context5.next) {
                 case 0:
                   result = [];
                   page = 1;
-                  _context6.next = 4;
+                  _context5.next = 4;
                   return this.db.setItem('cache_time', Date.now());
 
                 case 4:
 
-                  _context6.next = 7;
+                  _context5.next = 7;
                   return this.request('get', "https://api.github.com/repos/".concat(this.options.api, "/comments?").concat(queryStringify(this.urlQuery({
                     per_page: this.options.perPage,
                     page: page++
                   }))));
 
                 case 7:
-                  list = _context6.sent;
+                  list = _context5.sent;
                   throwError(Array.isArray(list), 'Can not get the danmuku, Please try again!');
                   result = [].concat(toConsumableArray(result), toConsumableArray(list));
 
                   if (!(list.length < this.options.perPage)) {
-                    _context6.next = 13;
+                    _context5.next = 13;
                     break;
                   }
 
@@ -4048,18 +4026,18 @@
                       id: item.id
                     }, body);
                   });
-                  return _context6.abrupt("return", this.db.setItem('danmus', danmus));
+                  return _context5.abrupt("return", this.db.setItem('danmus', danmus));
 
                 case 13:
-                  _context6.next = 4;
+                  _context5.next = 4;
                   break;
 
                 case 15:
                 case "end":
-                  return _context6.stop();
+                  return _context5.stop();
               }
             }
-          }, _callee6, this);
+          }, _callee5, this);
         }));
 
         function cache() {
@@ -4073,35 +4051,33 @@
       value: function () {
         var _send = asyncToGenerator(
         /*#__PURE__*/
-        regenerator.mark(function _callee7() {
+        regenerator.mark(function _callee6() {
           var danmu,
               query,
               data,
-              _args7 = arguments;
-          return regenerator.wrap(function _callee7$(_context7) {
+              _args6 = arguments;
+          return regenerator.wrap(function _callee6$(_context6) {
             while (1) {
-              switch (_context7.prev = _context7.next) {
+              switch (_context6.prev = _context6.next) {
                 case 0:
-                  danmu = _args7.length > 0 && _args7[0] !== undefined ? _args7[0] : {};
-                  throwError(danmu.time, "The 'time' to send the danmu cannot be empty, Please try again!");
-                  throwError(danmu.msg, "The 'msg' to send the danmu cannot be empty, Please try again!");
+                  danmu = _args6.length > 0 && _args6[0] !== undefined ? _args6[0] : {};
                   query = this.urlQuery({
                     body: JSON.stringify(danmu)
                   });
-                  _context7.next = 6;
+                  _context6.next = 4;
                   return this.request('post', "https://api.github.com/repos/".concat(this.options.api, "/comments"), query);
 
-                case 6:
-                  data = _context7.sent;
+                case 4:
+                  data = _context6.sent;
                   throwError(data.id, 'Can not send the danmu, Please try again!');
-                  return _context7.abrupt("return", JSON.parse(data.body));
+                  return _context6.abrupt("return", JSON.parse(data.body));
 
-                case 9:
+                case 7:
                 case "end":
-                  return _context7.stop();
+                  return _context6.stop();
               }
             }
-          }, _callee7, this);
+          }, _callee6, this);
         }));
 
         function send() {

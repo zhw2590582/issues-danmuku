@@ -12,6 +12,8 @@ export default class IssuesDanmuku {
       ],
       name: 'danmuku-db'
     });
+    this.limit = 0;
+    this.remaining = 0;
     this.init();
   }
 
@@ -42,13 +44,10 @@ export default class IssuesDanmuku {
 
     this.userInfo = await this.db.getItem('userInfo');
     this.token = await this.db.getItem('token');
+    const danmus = await this.db.getItem('danmus');
     this.isLogin = !!this.userInfo && !!this.token;
-    if (this.isLogin) {
-      await this.db.getItem('danmus').then(async danmus => {
-        if (!danmus) {
-          await this.cache();
-        }
-      });
+    if (this.isLogin && !danmus) {
+      await this.cache();
     }
   }
 
@@ -95,6 +94,8 @@ export default class IssuesDanmuku {
         await this.db.clear();
         return window.location.reload();
       } else {
+        this.limit = Number(res.headers.get('X-RateLimit-Limit'));
+        this.remaining = Number(res.headers.get('X-RateLimit-Remaining'));
         return res.json();
       }
     } catch (err) {
@@ -164,14 +165,6 @@ export default class IssuesDanmuku {
   }
 
   async send(danmu = {}) {
-    throwError(
-      danmu.time,
-      "The 'time' to send the danmu cannot be empty, Please try again!"
-    );
-    throwError(
-      danmu.msg,
-      "The 'msg' to send the danmu cannot be empty, Please try again!"
-    );
     const query = this.urlQuery({
       body: JSON.stringify(danmu)
     });
