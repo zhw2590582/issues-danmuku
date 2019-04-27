@@ -1,8 +1,8 @@
 {
   "name": "issues-danmuku",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "Detect connection speed with mini chart",
-  "main": "dist/IssuesDanmuku.js",
+  "main": "dist/issuesDanmuku.js",
   "scripts": {
     "dev": "cross-env NODE_ENV=development rollup -c -m -w",
     "build": "cross-env NODE_ENV=production rollup -c"
