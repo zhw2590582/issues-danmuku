@@ -1,19 +1,20 @@
-import localforage from 'localforage';
-import { queryStringify, getURLParameters, throwError } from './utils';
+import {
+  queryStringify,
+  getURLParameters,
+  throwError,
+  getStorage,
+  setStorage,
+  cleanStorage
+} from './utils';
 
 export default class IssuesDanmuku {
   constructor(options) {
     this.options = Object.assign({}, IssuesDanmuku.DEFAULT, options);
-    this.db = localforage.createInstance({
-      driver: [
-        localforage.WEBSQL,
-        localforage.INDEXEDDB,
-        localforage.LOCALSTORAGE
-      ],
-      name: 'danmuku-db'
-    });
     this.limit = 0;
     this.remaining = 0;
+    this.userInfo = null;
+    this.token = null;
+    this.isLogin = false;
     this.init();
   }
 
@@ -22,7 +23,7 @@ export default class IssuesDanmuku {
       api: '',
       clientID: '',
       clientSecret: '',
-      perPage: 100,
+      perPage: 1000,
       proxy:
         'https://cors-anywhere.herokuapp.com/https://github.com/login/oauth/access_token'
     };
@@ -33,28 +34,23 @@ export default class IssuesDanmuku {
     if (code) {
       const data = await this.getToken(code);
       throwError(data.access_token, 'Can not get token, Please login again!');
-      await this.db.setItem('token', data.access_token);
+      setStorage('token', data.access_token);
       const userInfo = await this.getUserInfo(data.access_token);
       throwError(userInfo.id, 'Can not get user info, Please login again!');
-      await this.db.setItem('userInfo', userInfo);
-      const redirect_uri = await this.db.getItem('redirect_uri');
+      setStorage('userInfo', userInfo);
+      const redirect_uri = getStorage('redirect_uri');
       throwError(redirect_uri, 'Can not get redirect url, Please login again!');
       window.history.replaceState(null, '', redirect_uri);
     }
 
-    this.userInfo = await this.db.getItem('userInfo');
-    this.token = await this.db.getItem('token');
-    const danmus = await this.db.getItem('danmus');
+    this.userInfo = getStorage('userInfo');
+    this.token = getStorage('token');
     this.isLogin = !!this.userInfo && !!this.token;
-    if (this.isLogin && !danmus) {
-      await this.cache();
-    }
   }
 
-  async login() {
-    await this.db.clear();
-    await this.db.setItem('redirect_uri', window.location.href);
-    await this.db.setItem('login_time', Date.now());
+  login() {
+    cleanStorage();
+    setStorage('redirect_uri', window.location.href);
     window.location.href = `http://github.com/login/oauth/authorize?${queryStringify(
       {
         state: 'issues-danmuku',
@@ -65,8 +61,8 @@ export default class IssuesDanmuku {
     )}`;
   }
 
-  async logout() {
-    await this.db.clear();
+  logout() {
+    cleanStorage();
     window.location.reload();
   }
 
@@ -89,9 +85,9 @@ export default class IssuesDanmuku {
         body
       });
       if (res.status === 404) {
-        return Promise.reject('Unauthorized.');
+        return Promise.reject(new Error('Unauthorized'));
       } else if (res.status === 401) {
-        await this.db.clear();
+        await cleanStorage();
         return window.location.reload();
       } else {
         this.limit = Number(res.headers.get('X-RateLimit-Limit'));
@@ -115,7 +111,7 @@ export default class IssuesDanmuku {
   getToken(code) {
     const query = this.urlQuery({
       code,
-      redirect_uri: location.href
+      redirect_uri: window.location.href
     });
     return this.request(
       'get',
@@ -130,38 +126,29 @@ export default class IssuesDanmuku {
     );
   }
 
-  async cache() {
-    let result = [];
-    let page = 1;
-    await this.db.setItem('cache_time', Date.now());
-    while (true) {
-      const list = await this.request(
-        'get',
-        `https://api.github.com/repos/${
-          this.options.api
-        }/comments?${queryStringify(
-          this.urlQuery({
-            per_page: this.options.perPage,
-            page: page++
-          })
-        )}`
-      );
-      throwError(
-        Array.isArray(list),
-        'Can not get the danmuku, Please try again!'
-      );
-      result = [...result, ...list];
-      if (list.length < this.options.perPage) {
-        const danmus = result.map(item => {
-          const body = JSON.parse(item.body);
-          return {
-            id: item.id,
-            ...body
-          };
-        });
-        return this.db.setItem('danmus', danmus);
-      }
-    }
+  async load() {
+    const result = await this.request(
+      'get',
+      `https://api.github.com/repos/${
+        this.options.api
+      }/comments?${queryStringify(
+        this.urlQuery({
+          per_page: this.options.perPage,
+          page: 1
+        })
+      )}`
+    );
+    throwError(
+      Array.isArray(result),
+      'Can not get the danmuku, Please try again!'
+    );
+    return result.map(item => {
+      const body = JSON.parse(item.body);
+      return {
+        id: item.id,
+        ...body
+      };
+    });
   }
 
   async send(danmu = {}) {

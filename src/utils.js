@@ -1,3 +1,21 @@
+const storageName = 'danmuku_settings';
+
+export function getStorage(key) {
+  const storage = JSON.parse(window.localStorage.getItem(storageName)) || {};
+  return key ? storage[key] : storage;
+}
+
+export function setStorage(key, value) {
+  const storage = Object.assign({}, getStorage(), {
+    [key]: value
+  });
+  return window.localStorage.setItem(storageName, JSON.stringify(storage));
+}
+
+export function cleanStorage() {
+  return window.localStorage.removeItem(storageName);
+}
+
 export function queryStringify(query) {
   const queryString = Object.keys(query)
     .map(key => `${key}=${window.encodeURIComponent(query[key] || '')}`)
